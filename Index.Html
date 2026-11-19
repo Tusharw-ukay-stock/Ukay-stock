@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UKAY-STOCK</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;
+ font-family:Arial;
+ background:#f1f4f9;
+ color:#222;
+}
+header{
+ background:#142b4a;
+ color:white;
+ padding:22px;
+ text-align:center;
+}
+header h2{margin:0}
+.container{padding:15px}
+.card{
+ background:white;
+ padding:18px;
+ border-radius:12px;
+ margin-bottom:15px;
+ box-shadow:0 2px 8px #ddd;
+}
+.stats{
+ display:grid;
+ grid-template-columns:1fr 1fr;
+ gap:12px;
+}
+.stat{
+ background:#fff;
+ padding:20px 10px;
+ border-radius:12px;
+ text-align:center;
+}
+.stat h2{color:#1769aa}
+input,select,button{
+ width:100%;
+ padding:13px;
+ margin:7px 0;
+ border:1px solid #ccc;
+ border-radius:7px;
+ font-size:15px;
+}
+button{
+ background:#1769aa;
+ color:white;
+ border:none;
+ font-weight:bold;
+}
+.out{background:#dc3545}
+table{
+ width:100%;
+ border-collapse:collapse;
+ font-size:12px;
+}
+td,th{
+ padding:9px 5px;
+ border-bottom:1px solid #ddd;
+ text-align:left;
+}
+th{background:#e8eef7}
+</style>
+</head>
+
+<body>
+
+<header>
+<h2>UKAY-STOCK</h2>
+<p>Ukay Metal Inventory Management</p>
+</header>
+
+<div class="container">
+
+<div class="stats">
+<div class="stat">
+<h2 id="total">0</h2>
+Total Stock
+</div>
+<div class="stat">
+<h2 id="parts">0</h2>
+Total Parts
+</div>
+<div class="stat">
+<h2 id="in">0</h2>
+Total IN
+</div>
+<div class="stat">
+<h2 id="out">0</h2>
+Total OUT
+</div>
+</div>
+
+<div class="card">
+<h3>Material Entry</h3>
+
+<input id="part" placeholder="Part Number">
+<input id="desc" placeholder="Part Description">
+
+<input id="qty" type="number" placeholder="Quantity">
+
+<select id="type">
+<option value="IN">Material IN</option>
+<option value="OUT">Material OUT</option>
+</select>
+
+<input id="remark" placeholder="Remark">
+
+<button onclick="save()">SAVE ENTRY</button>
+</div>
+
+<div class="card">
+<h3>Stock Search</h3>
+<input id="search" placeholder="Search Part Number"
+oninput="show()">
+
+<div style="overflow-x:auto">
+<table>
+<thead>
+<tr>
+<th>Part No.</th>
+<th>Description</th>
+<th>Stock</th>
+</tr>
+</thead>
+<tbody id="list"></tbody>
+</table>
+</div>
+</div>
+
+<div class="card">
+<h3>Recent Transactions</h3>
+<div id="history"></div>
+</div>
+
+</div>
+
+<script>
+let stock=JSON.parse(localStorage.getItem("stock")||"{}");
+let transactions=JSON.parse(localStorage.getItem("transactions")||"[]");
+
+function save(){
+ let p=document.getElementById("part").value.trim();
+ let d=document.getElementById("desc").value.trim();
+ let q=Number(document.getElementById("qty").value);
+ let t=document.getElementById("type").value;
+ let r=document.getElementById("remark").value;
+
+ if(!p||!d||!q||q<=0){
+ alert("Enter valid details");
+ return;
+ }
+
+ if(!stock[p]){
+ stock[p]={desc:d,qty:0};
+ }
+
+ if(t==="OUT" && stock[p].qty<q){
+ alert("Insufficient Stock!");
+ return;
+ }
+
+ stock[p].desc=d;
+
+ if(t==="IN") stock[p].qty+=q;
+ else stock[p].qty-=q;
+
+ transactions.unshift({
+ part:p,qty:q,type:t,remark:r,
+ date:new Date().toLocaleString()
+ });
+
+ localStorage.setItem("stock",JSON.stringify(stock));
+ localStorage.setItem("transactions",JSON.stringify(transactions));
+
+ document.getElementById("part").value="";
+ document.getElementById("desc").value="";
+ document.getElementById("qty").value="";
+ document.getElementById("remark").value="";
+
+ update();
+}
+
+function show(){
+ let s=document.getElementById("search").value.toLowerCase();
+ let html="";
+
+ Object.keys(stock).forEach(p=>{
+ if(p.toLowerCase().includes(s)||
+ stock[p].desc.toLowerCase().includes(s)){
+ html+=`<tr>
+ <td>${p}</td>
+ <td>${stock[p].desc}</td>
+ <td>${stock[p].qty}</td>
+ </tr>`;
+ }
+ });
+
+ document.getElementById("list").innerHTML=html;
+}
+
+function update(){
+ let total=0,ins=0,outs=0;
+
+ Object.values(stock).forEach(x=>total+=x.qty);
+
+ transactions.forEach(x=>{
+ if(x.type==="IN")ins+=x.qty;
+ else outs+=x.qty;
+ });
+
+ document.getElementById("total").innerText=total;
+ document.getElementById("parts").innerText=Object.keys(stock).length;
+ document.getElementById("in").innerText=ins;
+ document.getElementById("out").innerText=outs;
+
+ show();
+
+ document.getElementById("history").innerHTML=
+ transactions.slice(0,10).map(x=>
+ `<p>${x.part} | ${x.type} | ${x.qty}<br>
+ <small>${x.date}</small></p><hr>`
+ ).join("");
+}
+
+update();
+</script>
+
+</body>
+</html>
